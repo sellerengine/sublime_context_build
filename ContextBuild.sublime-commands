@@ -6,5 +6,7 @@
     { "caption": "ContextBuild: Build Selection",
             "command": "context_build_selection" },
     { "caption": "ContextBuild: Build Failures", 
-            "command": "context_build_failures" }
+            "command": "context_build_failures" },
+    { "caption": "ContextBuild: Stop Current Build",
+            "command": "context_build_stop" }
 ]
