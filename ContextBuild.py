@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import sublime, sublime_plugin
 
+import datetime
 import os
 import re
 import shlex
@@ -14,6 +15,8 @@ options = sublime.load_settings('ContextBuild.sublime-settings')
 
 class Build(object):
     last = None
+    lock = threading.Lock()
+    viewIdToBuild = {}
 
     def __init__(self, paths = [], tests = [], onlyLastFailures = False):
         self.paths = paths
@@ -31,23 +34,70 @@ class Build(object):
             time.sleep(0.1)
 
 
+    @classmethod
+    def abortView(cls, viewId):
+        with cls.lock:
+            build = cls.viewIdToBuild.get(viewId)
+        # Release lock before aborting, since aborts require the lock.
+        # Also run it in a new thread to prevent "Slow plugin" warnings.
+        if build:
+            t = threading.Thread(target = build.abort)
+            t.start()
+
+
+    def print(self, text, end = '\n'):
+        edit = self.view.begin_edit()
+        cat = text + end
+        self.view.insert(edit, self.view.size(), cat)
+        self.view.end_edit(edit)
+
+
     def run(self):
-        self.shouldStop = False
+        # Make the view for our output in the main thread, so that we don't
+        # have issues with memory access in sublime.
+        self.viewNext = self.window.new_file()
+
+        if self.thread:
+            # We're still running; user probably requested "Rebuild last".
+            scheduler = threading.Thread(target = self._abortThenRun)
+            scheduler.start()
+            return
+
         self.thread = threading.Thread(target = self._realRun)
         self.thread.daemon = True
         self.thread.start()
 
 
-    def _realRun(self):
-        oldBuild = getattr(self.window, '_ContextBuildRunning', None)
-        if oldBuild:
-            oldBuild.abort()
+    def _abortThenRun(self):
+        self.abort()
+        self._realRun()
 
-        self.window._ContextBuildRunning = self
+
+    def _realRun(self):
+        """Called in a new thread.  self.view must already have been set to
+        a new file in the main thread.
+        """
+        with self.lock:
+            builds = self.viewIdToBuild.values()
+        for build in builds:
+            build.abort()
+
+        self.view = self.viewNext
+        self.shouldStop = False
+        with self.lock:
+            self.viewIdToBuild[self.view.id()] = self
+
         try:
+            now = datetime.datetime.now()
+            timeStr = now.strftime("%I:%M:%S%p-%d-%m-%Y")
+            buildName = "Build-{0}.context-build".format(timeStr)
+            self.view.set_scratch(True)
+            self.view.set_name(buildName)
             self._doBuild()
         finally:
-            self.window._ContextBuildRunning = None
+            with self.lock:
+                del self.viewIdToBuild[self.view.id()]
+            self.view = None
             self.thread = None
 
 
@@ -66,13 +116,13 @@ class Build(object):
             testDesc = repr(self.tests)
             cmd += " " + " ".join([ p.encode('utf8') for p in self.tests ])
         else:
-            print("No tests to run.")
+            self.print("No tests to run.")
             return
             
         env = os.environ.copy()
         env['PYTHONPATH'] = self._option('context_build_python_path')
 
-        print("Running tests: " + testDesc)
+        self.print("Running tests: " + testDesc)
 
         p = subprocess.Popen(shlex.split(cmd), stdout = subprocess.PIPE, 
                 stderr = subprocess.STDOUT, env = env,
@@ -84,7 +134,7 @@ class Build(object):
                 break
             time.sleep(0.1)
         if p.poll() is None:
-            print("Aborting tests...")
+            self.print("\n\nAborting tests...")
             while p.poll() is None:
                 try:
                     p.terminate()
@@ -92,6 +142,9 @@ class Build(object):
                     # Died already
                     pass
                 time.sleep(0.1)
+
+        # Finish getting output
+        stdThread.join()
 
 
     def _dumpStdout(self, p):
@@ -103,9 +156,9 @@ class Build(object):
                 l = p.stdout.read(1)
                 if not l:
                     break
-                print(l, end = '')
+                self.print(l, end = '')
             time.sleep(0.1)
-        print(p.stdout.read())
+        self.print(p.stdout.read())
 
 
     def _option(self, name, default = ''):
@@ -119,18 +172,18 @@ class Build(object):
 
 class ContextBuildPlugin(sublime_plugin.WindowCommand):
     def hasLastBuild(self):
-        return getattr(self.window, '_ContextBuild', None) is not None
+        return getattr(self.window, '_contextBuild', None) is not None
 
 
     @property
     def lastBuild(self):
-        return self.window._ContextBuild
+        return self.window._contextBuild
 
 
     @lastBuild.setter
     def lastBuild(self, value):
         value.window = self.window
-        self.window._ContextBuild = value
+        self.window._contextBuild = value
 
 
 class ContextBuildCurrentCommand(ContextBuildPlugin):
@@ -200,7 +253,8 @@ class ContextBuildSelectionCommand(ContextBuildPlugin):
             self.lastBuild = Build(tests = tests)
             self.lastBuild.run()
         else:
-            print("No tests found")
+            self.lastBuild = Build(tests = [])
+            self.lastBuild.run()
 
 
 class ContextBuildLastCommand(ContextBuildPlugin):
@@ -228,3 +282,8 @@ class ContextBuildStopCommand(ContextBuildPlugin):
 
     def is_enabled(self):
         return self.hasLastBuild() and self.lastBuild.thread
+
+
+class ContextBuildViewClosedEvent(sublime_plugin.EventListener):
+    def on_close(self, view):
+        Build.abortView(view.id())
