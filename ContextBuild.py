@@ -46,10 +46,13 @@ class Build(object):
 
 
     def print(self, text, end = '\n'):
-        edit = self.view.begin_edit()
         cat = text + end
-        self.view.insert(edit, self.view.size(), cat)
-        self.view.end_edit(edit)
+        # Print in sublime's main thread to not cause buffer issues
+        def realPrint():
+            edit = self.view.begin_edit()
+            self.view.insert(edit, self.view.size(), text)
+            self.view.end_edit(edit)
+        sublime.set_timeout(realPrint, 0)
 
 
     def run(self):
@@ -96,7 +99,7 @@ class Build(object):
             self._doBuild()
         finally:
             with self.lock:
-                del self.viewIdToBuild[self.view.id()]
+                self.viewIdToBuild.pop(self.view.id())
             self.view = None
             self.thread = None
 
