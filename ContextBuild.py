@@ -1,10 +1,13 @@
 import sublime, sublime_plugin
 
+import os
 import re
 import shlex
 import subprocess
 
 options = sublime.load_settings('ContextBuild.sublime-settings')
+
+pythonPath = os.environ.get(options.get('pythonEnvironmentVariable', ''), '')
 
 class Build(object):
     last = None
@@ -34,8 +37,11 @@ class Build(object):
             print("No tests to run.")
             return
             
+        env = os.environ.copy()
+        env['PYTHONPATH'] = pythonPath
         p = subprocess.Popen(shlex.split(cmd), stdout = subprocess.PIPE, 
-                stderr = subprocess.STDOUT, universal_newlines = True)
+                stderr = subprocess.STDOUT, env = env,
+                universal_newlines = True)
         stdout, _ = p.communicate()
         print stdout
         print("Result: " + str(p.poll()))
