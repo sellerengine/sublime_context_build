@@ -5,8 +5,12 @@
         "id": "tools",
         "children": [
             { "caption": "-" },
-            { "caption": "Build current file", 
-                    "command": "context_build_current" }
+            { "caption": "Build Current File", 
+                    "command": "context_build_current" },
+            { "caption": "Rebuild Last", 
+                    "command": "context_build_last" },
+            { "caption": "Rebuild Failures", 
+                    "command": "context_build_failures" }
         ]
     }
 ]

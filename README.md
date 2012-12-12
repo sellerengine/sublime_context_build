@@ -8,10 +8,10 @@ Note: You MUST set the PYTHONENV environment variable to be the PYTHONPATH
 for tests that you are going to run.  sublime clobbers PYTHONPATH, so we
 have to reset it for running the tests.
 
-Shortcuts:
+Shortcuts (Ctrl / Super and Option / Alt are interchangeable):
 
-* Ctrl+B - Build current file
-* Ctrl+Shift+B - Build selected tests (be sure to select leading newline)
-* F12 - Re-run last build
-* Ctrl+F12 - Re-run failures from last build
+* Ctrl+B - Build selected test(s)
+* Ctrl+Shift+B - Build current file
+* Alt+B - Re-run last build
+* Alt+Shift+B - Re-run failures from last build
 

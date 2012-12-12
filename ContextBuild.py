@@ -67,38 +67,51 @@ class ContextBuildSelectedCommand(sublime_plugin.WindowCommand):
         return True
 
 
+def findTestFromLine(view, testLine, actualStart, testsOut):
+    indent = testLine.group(1)
+    testName = testLine.group(2)
+    # Find the class
+    for sel in reversed(view.find_all("^([ \t]*)class (Test[^( ]*)", 
+            re.M)):
+        if sel.a > actualStart:
+            continue
+        text = view.substr(sel)
+        print(repr(text))
+        clsIndent = len(re.match("[ \t]*", text).group())
+        print("Comparing " + str(clsIndent))
+        if clsIndent < indent:
+            # MATCH!
+            testsOut.append(view.file_name() + ':' 
+                    + text[clsIndent + len('class '):] + '.' 
+                    + testName)
+            break
+
+
 class ContextBuildSelectionCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        path = view.file_name()
         reg = view.sel()[0]
+        tests = []
+        testLineRe = re.compile("^([ \t]*)def (test[^( ]*)", re.M)
         if not reg.empty():
-            tests = []
-
             selection = view.substr(reg)
-            for test in re.finditer("^([ \t]*)def (test[^( ]*)", selection, 
-                    re.M):
-                testStart = test.start() + reg.a
-                indent = test.group(1)
-                testName = test.group(2)
-                # Find the class
-                for sel in reversed(view.find_all("^([ \t]*)class (Test[^( ]*)", 
-                        re.M)):
-                    print("Looking at " + view.substr(sel) + " at " 
-                            + str(sel.a) + " from " + str(testStart))
-                    if sel.a > testStart:
-                        continue
-                    text = view.substr(sel)
-                    print(repr(text))
-                    clsIndent = len(re.match("[ \t]*", text).group())
-                    print("Comparing " + str(clsIndent))
-                    if clsIndent < indent:
-                        # MATCH!
-                        tests.append(path + ':' 
-                                + text[clsIndent + len('class '):] + '.' 
-                                + testName)
-                        break
+            for test in testLineRe.finditer(selection):
+                findTestFromLine(view, test, test.start() + reg.a, tests)
 
+        if not tests:
+            # Still no tests... try to find one immediately before our
+            # current line
+            for line in reversed(view.find_all(testLineRe.pattern, re.M)):
+                # After cursor?  ignore it
+                if line.a > reg.a:
+                    continue
+                testLine = testLineRe.match(view.substr(line))
+                findTestFromLine(view, testLine, line.a, tests)
+                if tests:
+                    # Only one test this way
+                    break
+
+        if tests:
             print(tests)
             Build.last = Build(tests = tests)
             Build.last.run()
