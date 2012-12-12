@@ -1,0 +1,12 @@
+[
+    {
+        "caption": "Tools",
+        "mnemonic": "t",
+        "id": "tools",
+        "children": [
+            { "caption": "-" },
+            { "caption": "Build current file", 
+                    "command": "context_build_current" }
+        ]
+    }
+]

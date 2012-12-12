@@ -1,0 +1,8 @@
+[
+	{ "caption": "-", "id": "side-bar-end-separator"},
+	{ "caption": "Build Selected", "command": "context_build_selected", 
+            "args": { "paths": [] } },
+    { "caption": "Rebuild Last", "command": "context_build_last" },
+    { "caption": "Rebuild Failures", 
+            "command": "context_build_failures" }
+]

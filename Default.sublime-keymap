@@ -1,0 +1,6 @@
+[
+    { "keys": [ "ctrl+b" ], "command": "context_build_current" },
+    { "keys": [ "ctrl+shift+b" ], "command": "context_build_selection" },
+    { "keys": [ "f12" ], "command": "context_build_last" },
+    { "keys": [ "ctrl+f12" ], "command": "context_build_failures" }
+]

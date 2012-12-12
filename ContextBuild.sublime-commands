@@ -1,0 +1,10 @@
+[
+    { "caption": "ContextBuild: Build Current",
+            "command": "context_build_current" },
+    { "caption": "ContextBuild: Build Last", 
+            "command": "context_build_last" },
+    { "caption": "ContextBuild: Build Selection",
+            "command": "context_build_selection" },
+    { "caption": "ContextBuild: Build Failures", 
+            "command": "context_build_failures" }
+]
