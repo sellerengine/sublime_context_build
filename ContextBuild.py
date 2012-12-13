@@ -93,8 +93,18 @@ class Build(object):
                             # Cycle completed
                             break
 
+            if options.get('save_before_build'):
+                av = self.window.active_view()
+                curView = av.id()
+                while True:
+                    if av.is_dirty():
+                        av.run_command("save")
+                    self.window.run_command("next_view")
+                    av = self.window.active_view()
+                    if av.id() == curView:
+                        break
+
             self.window._contextBuildView = self.view
-            self.window.run_command("focus_view", { "view": self.view })
             self.viewId = viewNextId
             self._settings = {}
             for key in buildSettings:
