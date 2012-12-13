@@ -5,11 +5,11 @@
         "id": "tools",
         "children": [
             { "caption": "-" },
-            { "caption": "Build Current File", 
+            { "caption": "Build Current File",
                     "command": "context_build_current" },
-            { "caption": "Rebuild Last", 
+            { "caption": "Rebuild Last",
                     "command": "context_build_last" },
-            { "caption": "Rebuild Failures", 
+            { "caption": "Rebuild Failures",
                     "command": "context_build_failures" }
         ]
     }
