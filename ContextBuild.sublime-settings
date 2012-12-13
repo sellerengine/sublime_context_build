@@ -1,3 +1,9 @@
 {
-    "context_build_python_path": ""
+    //Project-specific build configuration
+    "context_build_path": "/usr/local/bin:/usr/bin:/usr/sbin",
+    "context_build_python_path": "",
+
+    //Plugin configuration
+    //Hide last build when a new build is issued in the same window?
+    "hide_last_build_on_new": true
 }
