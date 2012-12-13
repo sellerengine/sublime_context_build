@@ -1,7 +1,8 @@
 
 from __future__ import print_function
 
-import sublime, sublime_plugin
+import sublime
+import sublime_plugin
 
 import datetime
 import os
@@ -50,7 +51,7 @@ class Build(object):
         # Print in sublime's main thread to not cause buffer issues
         def realPrint():
             edit = self.view.begin_edit()
-            self.view.insert(edit, self.view.size(), text)
+            self.view.insert(edit, self.view.size(), cat)
             self.view.end_edit(edit)
         sublime.set_timeout(realPrint, 0)
 
@@ -121,13 +122,13 @@ class Build(object):
         else:
             self.print("No tests to run.")
             return
-            
+
         env = os.environ.copy()
         env['PYTHONPATH'] = self._option('context_build_python_path')
 
         self.print("Running tests: " + testDesc)
 
-        p = subprocess.Popen(shlex.split(cmd), stdout = subprocess.PIPE, 
+        p = subprocess.Popen(shlex.split(cmd), stdout = subprocess.PIPE,
                 stderr = subprocess.STDOUT, env = env,
                 universal_newlines = True)
         stdThread = threading.Thread(target = self._dumpStdout, args = (p,))
@@ -141,7 +142,7 @@ class Build(object):
             while p.poll() is None:
                 try:
                     p.terminate()
-                except OSError, e:
+                except OSError:
                     # Died already
                     pass
                 time.sleep(0.1)
@@ -154,7 +155,6 @@ class Build(object):
         """Dumps the stdout from subprocess p; called in a new thread."""
         while p.poll() is None:
             p.stdout.flush()
-            buffer = []
             while True:
                 l = p.stdout.read(1)
                 if not l:
@@ -165,11 +165,11 @@ class Build(object):
 
 
     def _option(self, name, default = ''):
-        """We want to use the project's overloaded settings if they're 
+        """We want to use the project's overloaded settings if they're
         available for things like paths, but default to sane defaults
         specified in ContextBuild.sublime-settings.
         """
-        return self.window.active_view().settings().get(name, 
+        return self.window.active_view().settings().get(name,
                 options.get(name, default))
 
 
@@ -191,7 +191,7 @@ class ContextBuildPlugin(sublime_plugin.WindowCommand):
 
 class ContextBuildCurrentCommand(ContextBuildPlugin):
     def run(self):
-        self.lastBuild = Build(paths = 
+        self.lastBuild = Build(paths =
                 [ self.window.active_view().file_name() ])
         self.lastBuild.run()
 
@@ -214,7 +214,7 @@ def findTestFromLine(view, testLine, actualStart, testsOut):
     indent = testLine.group(1)
     testName = testLine.group(2)
     # Find the class
-    for sel in reversed(view.find_all("^([ \t]*)class (Test[^( ]*)", 
+    for sel in reversed(view.find_all("^([ \t]*)class (Test[^( ]*)",
             re.M)):
         if sel.a > actualStart:
             continue
@@ -222,8 +222,8 @@ def findTestFromLine(view, testLine, actualStart, testsOut):
         clsIndent = len(re.match("[ \t]*", text).group())
         if clsIndent < indent:
             # MATCH!
-            testsOut.append(view.file_name() + ':' 
-                    + text[clsIndent + len('class '):] + '.' 
+            testsOut.append(view.file_name() + ':'
+                    + text[clsIndent + len('class '):] + '.'
                     + testName)
             break
 
