@@ -1,6 +1,6 @@
 [
-    { "keys": [ "ctrl+shift+b" ], "command": "context_build_current" },
-    { "keys": [ "ctrl+b" ], "command": "context_build_selection" },
-    { "keys": [ "alt+b" ], "command": "context_build_last" },
-    { "keys": [ "alt+shift+b" ], "command": "context_build_failures" }
+    { "keys": [ "alt+shift+b" ], "command": "context_build_current" },
+    { "keys": [ "alt+b" ], "command": "context_build_selection" },
+    { "keys": [ "ctrl+b" ], "command": "context_build_last" },
+    { "keys": [ "ctrl+shift+b" ], "command": "context_build_failures" }
 ]

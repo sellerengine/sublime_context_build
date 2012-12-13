@@ -6,5 +6,8 @@
     //Plugin configuration
     //Hide last build when a new build is issued in the same window?
     "hide_last_build_on_new": true,
-    "save_before_build": true
+    "save_before_build": true,
+
+    "python_runner": "nosetests",
+    "nosetests_args": "-v"
 }
