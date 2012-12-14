@@ -1,13 +1,21 @@
 {
     //Project-specific build configuration
+    //The PATH to used for launching subprocesses
     "context_build_path": "/usr/local/bin:/usr/bin:/usr/sbin",
+    //The PYTHONPATH to use for launching python_runner
     "context_build_python_path": "",
+    //Default runner for this project.
+    "context_build_runner": "nosetests",
+    //Specific runners (run before the default) for
 
     //Plugin configuration
     //Hide last build when a new build is issued in the same window?
     "hide_last_build_on_new": true,
     "save_before_build": true,
 
-    "python_runner": "nosetests",
-    "nosetests_args": "-v"
+    //Settings for Built-in runners
+    //nosetests
+    "nosetests_args": "-v",
+    //mocha
+    "mocha_compilers": []
 }

@@ -1,4 +1,5 @@
 
+import os
 import shlex
 import subprocess
 import tempfile
@@ -8,7 +9,8 @@ import time
 # Sublime doesn't let you iterate over loaded settings, so we just have to
 # know what settings we're interested in collapsing from the project settings.
 # (We have to know because options can only be fetched on the main thread)
-buildSettings = [ "context_build_path", "context_build_python_path" ]
+buildSettings = [ "context_build_path", "context_build_python_path",
+        "context_build_runner" ]
 
 class RunnerBase(object):
     """A class to run a certain type of tests and populate self.failed with
@@ -44,10 +46,21 @@ class RunnerBase(object):
             defaultKwargs['stdout'] = tempfile.TemporaryFile()
         defaultKwargs['stderr'] = subprocess.STDOUT
         defaultKwargs.update(kwargs)
+
+        env = os.environ.copy()
+        env['PATH'] = self.settings['context_build_path'] + ':' + env['PATH']
+        env.update(defaultKwargs.get('env', {}))
+        defaultKwargs['env'] = env
+
         p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
         if echoStdout:
+            if callable(echoStdout):
+                lineCallback = echoStdout
+            else:
+                lineCallback = lambda l: self.writeOutput(l, end = '')
+
             stdThread = threading.Thread(target = self._dumpStdout,
-                    args = (p,))
+                    args = (p, lineCallback))
             stdThread.start()
         while p.poll() is None:
             if self._shouldStop():
@@ -55,7 +68,7 @@ class RunnerBase(object):
             time.sleep(0.1)
         if p.poll() is None:
             # Exited due to shouldStop
-            self._writeOutput("\n\nAborting tests...")
+            self.writeOutput("\n\nAborting tests...")
             while p.poll() is None:
                 try:
                     p.terminate()
@@ -81,8 +94,12 @@ class RunnerBase(object):
 
         writeOutput can be used to write output directly to the build pane.
         """
+        if ('Runner' + self.settings['context_build_runner'].title()
+                != self.__class__.__name__):
+            self.failures = []
+            return
         self.failures = []
-        self._writeOutput = writeOutput
+        self.writeOutput = writeOutput
         self._shouldStop = shouldStop
         self.doRunner(writeOutput, shouldStop)
 
@@ -101,7 +118,7 @@ class RunnerBase(object):
         self._settings = {}
         for key in buildSettings:
             self._settings[key] = self._coalesceOption(key)
-        self._runnerSetup(paths = paths, tests = tests)
+        self.runnerSetup(paths = paths, tests = tests)
 
 
     def useFailures(self):
@@ -120,13 +137,13 @@ class RunnerBase(object):
         return self.view.settings().get(name, self.options.get(name, default))
 
 
-    def _dumpStdout(self, p):
+    def _dumpStdout(self, p, lineCallback):
         """Dumps the stdout from subprocess p; called in a new thread."""
         while p.poll() is None:
             while True:
                 l = p.stdout.readline()
                 if not l:
                     break
-                self._writeOutput(l, end = '')
+                lineCallback(l)
             time.sleep(0.1)
-        self._writeOutput(p.stdout.read())
+        lineCallback(p.stdout.read())

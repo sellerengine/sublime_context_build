@@ -6,12 +6,10 @@ from runnerBase import RunnerBase
 
 class RunnerNosetests(RunnerBase):
     def doRunner(self, writeOutput, shouldStop):
-        env = os.environ.copy()
-        env['PYTHONPATH'] = self.settings['context_build_python_path']
-        env['PATH'] = self.settings['context_build_path'] + ':' + env['PATH']
-
         writeOutput("Running tests: " + self.cmd)
-        self.runProcess(self.cmd, echoStdout = True, env = env)
+        self.runProcess(self.cmd, echoStdout = True,
+                env = { 'PYTHONPATH':
+                        self.settings['context_build_python_path']})
 
         # Read nose output to see what failed
         try:
@@ -25,15 +23,15 @@ class RunnerNosetests(RunnerBase):
             pass
 
 
-    def _runnerSetup(self, paths = [], tests = []):
+    def runnerSetup(self, paths = [], tests = []):
         """Build our command line based on the given paths and tests.
         """
         cmd = self._getBaseCmd()
 
         if paths:
-            cmd += " " + " ".join([ p.encode('utf8') for p in paths ])
+            cmd += " " + " ".join(paths)
         elif tests:
-            cmd += " " + " ".join([ p.encode('utf8') for p in tests ])
+            cmd += " " + " ".join(tests)
         else:
             self.cmd = 'echo "No tests to run."'
             return

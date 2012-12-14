@@ -7,9 +7,10 @@ import re
 import threading
 import time
 
+from runnerMocha import RunnerMocha
 from runnerNosetests import RunnerNosetests
 
-runners = { "nosetests": RunnerNosetests }
+runners = [ RunnerNosetests, RunnerMocha ]
 
 options = sublime.load_settings('ContextBuild.sublime-settings')
 
@@ -24,11 +25,9 @@ class Build(object):
         self.lastView = None
         self.thread = None
         self.hasBuilt = False
-        self.runners = {}
-        for lang in [ 'python' ]:
-            runner = options.get(lang + '_runner')
-            if runner:
-                self.runners[lang] = runners[runner](options, self)
+        self.runners = []
+        for runner in runners:
+            self.runners.append(runner(options, self))
 
 
     def abort(self):
@@ -66,6 +65,7 @@ class Build(object):
         self.view.set_scratch(True)
         self.view.set_name(buildName)
 
+        print(options.get("save_before_build"))
         if options.get('hide_last_build_on_new'):
             if self.lastView:
                 self.window.focus_view(self.lastView)
@@ -88,7 +88,7 @@ class Build(object):
 
 
     def setupTests(self, paths = [], tests = []):
-        for r in self.runners.values():
+        for r in self.runners:
             r.setupTests(paths = paths, tests = tests)
 
 
@@ -125,7 +125,7 @@ class Build(object):
 
     def _doBuild(self):
         """The main method for the build thread"""
-        for r in self.runners.values():
+        for r in self.runners:
             r.runTests(self._writeOutput, self._shouldStop)
 
 
