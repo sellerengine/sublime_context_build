@@ -68,30 +68,15 @@ class Build(object):
 
         if options.get('hide_last_build_on_new'):
             if self.lastView:
-                # Bah to dirty hacks.  Oh well...
-                firstId = self.window.active_view().id()
-                while True:
-                    self.window.run_command("next_view")
-                    myId = self.window.active_view().id()
-                    if myId == self.lastView.id():
-                        # Can only close current tab....
-                        self.window.run_command("close")
-                        break
-                    elif myId == firstId:
-                        # Cycle completed
-                        break
+                self.window.focus_view(self.lastView)
+                if self.window.active_view().id() == self.lastView.id():
+                    self.window.run_command("close")
         self.lastView = self.view
 
         if options.get('save_before_build'):
-            av = self.window.active_view()
-            curView = av.id()
-            while True:
-                if av.is_dirty():
-                    av.run_command("save")
-                self.window.run_command("next_view")
-                av = self.window.active_view()
-                if av.id() == curView:
-                    break
+            for view in self.window.views():
+                if view.is_dirty():
+                    view.run_command("save")
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self
@@ -155,6 +140,7 @@ class Build(object):
             edit = self.view.begin_edit()
             self.view.insert(edit, self.view.size(), cat)
             self.view.end_edit(edit)
+            self.view.show_at_center(self.view.size())
         sublime.set_timeout(realPrint, 0)
 
 
