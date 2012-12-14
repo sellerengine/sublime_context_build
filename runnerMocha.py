@@ -24,7 +24,6 @@ class RunnerMocha(RunnerBase):
 
 
     def runnerSetup(self, paths = [], tests = []):
-        self._paths = paths
         cmd = "mocha --reporter tap"
         # mocha_compilers is a system-wide setting, not a project setting,
         # se we get it from options rather than settings.
@@ -35,6 +34,8 @@ class RunnerMocha(RunnerBase):
 
         if paths:
             cmd += ' ' + ' '.join(paths)
+            # Remember our paths, since we re-use them for failed tests.
+            self._paths = paths
         elif tests and len(tests) > 1:
             cmd += ' ' + ' '.join(tests[0])
             cmd += ' --grep "'
@@ -42,6 +43,7 @@ class RunnerMocha(RunnerBase):
             cmd += '"'
         else:
             cmd = "echo 'No tests to run.'"
+            self._paths = []
 
         self.cmd = cmd
 

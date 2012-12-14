@@ -54,29 +54,35 @@ class Build(object):
             scheduler.start()
             return
 
-        # Be sure to make the view for our output in the main thread, so that
-        # we don't have issues with memory access in sublime.
-        self.view = self.window.new_file()
-        self.viewId = self.view.id()
+        if options.get('save_before_build'):
+            for view in self.window.views():
+                if view.is_dirty():
+                    view.run_command("save")
+
+        newView = True
+        if options.get('hide_last_build_on_new'):
+            if (self.lastView
+                    and self.window.get_view_index(self.lastView)[0] != -1):
+                self.view = self.lastView
+                edit = self.view.begin_edit()
+                self.view.replace(edit, sublime.Region(0, self.view.size()),
+                        '')
+                self.view.end_edit(edit)
+                self.window.focus_view(self.view)
+                newView = False
+
+        if newView:
+            # Be sure to make the view for our output in the main thread, so
+            # that we don't have issues with memory access in sublime.
+            self.view = self.window.new_file()
+            self.viewId = self.view.id()
+        self.lastView = self.view
 
         now = datetime.datetime.now()
         timeStr = now.strftime("%I:%M:%S%p-%d-%m-%Y")
         buildName = "Build-{0}.context-build".format(timeStr)
         self.view.set_scratch(True)
         self.view.set_name(buildName)
-
-        print(options.get("save_before_build"))
-        if options.get('hide_last_build_on_new'):
-            if self.lastView:
-                self.window.focus_view(self.lastView)
-                if self.window.active_view().id() == self.lastView.id():
-                    self.window.run_command("close")
-        self.lastView = self.view
-
-        if options.get('save_before_build'):
-            for view in self.window.views():
-                if view.is_dirty():
-                    view.run_command("save")
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self

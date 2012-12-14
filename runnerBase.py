@@ -94,11 +94,10 @@ class RunnerBase(object):
 
         writeOutput can be used to write output directly to the build pane.
         """
+        self.failures = []
         if ('Runner' + self.settings['context_build_runner'].title()
                 != self.__class__.__name__):
-            self.failures = []
             return
-        self.failures = []
         self.writeOutput = writeOutput
         self._shouldStop = shouldStop
         self.doRunner(writeOutput, shouldStop)
