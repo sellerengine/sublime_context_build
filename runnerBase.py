@@ -123,9 +123,8 @@ class RunnerBase(object):
     def _dumpStdout(self, p):
         """Dumps the stdout from subprocess p; called in a new thread."""
         while p.poll() is None:
-            p.stdout.flush()
             while True:
-                l = p.stdout.read(1)
+                l = p.stdout.readline()
                 if not l:
                     break
                 self._writeOutput(l, end = '')
