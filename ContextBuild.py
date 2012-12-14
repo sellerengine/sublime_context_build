@@ -93,7 +93,7 @@ class Build(object):
 
 
     def useFailures(self):
-        for r in self.runners.values():
+        for r in self.runners:
             r.useFailures()
 
 
