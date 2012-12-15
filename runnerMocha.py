@@ -10,7 +10,7 @@ class RunnerMocha(RunnerBase):
         self._countFailed = 0
         # Use first failure as paths storage
         self.failures.append(self._paths)
-        self.runProcess(self.cmd, echoStdout = self._processLine)
+        self._runProcess(self.cmd, echoStdout = self._processLine)
 
         self.writeOutput('')
         self.writeOutput("=" * 80)
@@ -37,9 +37,19 @@ class RunnerMocha(RunnerBase):
             # Remember our paths, since we re-use them for failed tests.
             self._paths = paths
         elif tests and len(tests) > 1:
-            cmd += ' ' + ' '.join(tests[0])
+            # First element is always an array of paths including the specified
+            # tests.  Other elements optionally may be an arrow of paths
+            # to add
+            paths = []
+            testNames = []
+            for t in tests:
+                if isinstance(t, list):
+                    paths.extend(t)
+                else:
+                    testNames.append(t)
+            cmd += ' ' + ' '.join(paths)
             cmd += ' --grep "'
-            cmd += '|'.join(tests[1:])
+            cmd += '|'.join(testNames)
             cmd += '"'
         else:
             cmd = "echo 'No tests to run.'"

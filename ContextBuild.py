@@ -3,7 +3,6 @@ import sublime
 import sublime_plugin
 
 import datetime
-import re
 import threading
 import time
 
@@ -45,6 +44,15 @@ class Build(object):
         if build:
             t = threading.Thread(target = build.abort)
             t.start()
+
+
+    def getRunnerForPath(self, path):
+        """Return the Runner instance that will handle path.
+        """
+        runnerType = self._coalesceOption('context_build_runner')
+        for r in self.runners:
+            if r.__class__.__name__ == 'Runner' + runnerType.title():
+                return r
 
 
     def run(self):
@@ -129,6 +137,17 @@ class Build(object):
         self.hasBuilt = True
 
 
+    def _coalesceOption(self, name, default = ''):
+        """We want to use the project's overloaded settings if they're
+        available for things like paths, but default to sane defaults
+        specified in ContextBuild.sublime-settings.
+
+        Must be called in main thread
+        """
+        return self.window.active_view().settings().get(name,
+                options.get(name, default))
+
+
     def _doBuild(self):
         """The main method for the build thread"""
         for r in self.runners:
@@ -185,47 +204,17 @@ class ContextBuildSelectedCommand(ContextBuildPlugin):
         return True
 
 
-def findTestFromLine(view, testLine, actualStart, testsOut):
-    indent = testLine.group(1)
-    testName = testLine.group(2)
-    # Find the class
-    for sel in reversed(view.find_all("^([ \t]*)class (Test[^( ]*)",
-            re.M)):
-        if sel.a > actualStart:
-            continue
-        text = view.substr(sel)
-        clsIndent = len(re.match("[ \t]*", text).group())
-        if clsIndent < indent:
-            # MATCH!
-            testsOut.append(view.file_name() + ':'
-                    + text[clsIndent + len('class '):] + '.'
-                    + testName)
-            break
-
-
 class ContextBuildSelectionCommand(ContextBuildPlugin):
     def run(self):
         view = self.window.active_view()
-        reg = view.sel()[0]
+        viewText = view.substr(sublime.Region(0, view.size()))
+        regions = view.sel()
         tests = []
-        testLineRe = re.compile("^([ \t]*)def (test[^( ]*)", re.M)
-        if not reg.empty():
-            selection = view.substr(reg)
-            for test in testLineRe.finditer(selection):
-                findTestFromLine(view, test, test.start() + reg.a, tests)
-
-        if not tests:
-            # Still no tests... try to find one immediately before our
-            # current line
-            for line in reversed(view.find_all(testLineRe.pattern, re.M)):
-                # After cursor?  ignore it
-                if line.a > reg.a:
-                    continue
-                testLine = testLineRe.match(view.substr(line))
-                findTestFromLine(view, testLine, line.a, tests)
-                if tests:
-                    # Only one test this way
-                    break
+        filePath = view.file_name()
+        runner = self.build.getRunnerForPath(filePath)
+        for reg in regions:
+            tests.extend(runner.getTestsFromRegion(filePath, viewText, reg.a,
+                    reg.b))
 
         self.build.setupTests(tests = tests)
         self.build.run()

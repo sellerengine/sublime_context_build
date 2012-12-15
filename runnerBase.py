@@ -28,63 +28,11 @@ class RunnerBase(object):
         return self._settings
 
 
-    def runProcess(self, cmd, echoStdout = True, **kwargs):
-        """Run a command through subprocess.Popen and optionally spit all
-        of the output to our output pane.  Checks shouldStop throughout
-        the execution.
-
-        echoStdout -- If false, returns the standard output as a file-like
-                object.
+    def getTestsFromRegion(self, filePath, viewText, start, end):
+        """Implement in subclass to get a list of tests (input into setupTests)
+        to run based on the region from start to end in viewText.
         """
-        cmd = str(self.cmd)
-        defaultKwargs = {
-            'universal_newlines': True
-        }
-        if echoStdout:
-            defaultKwargs['stdout'] = subprocess.PIPE
-        else:
-            defaultKwargs['stdout'] = tempfile.TemporaryFile()
-        defaultKwargs['stderr'] = subprocess.STDOUT
-        defaultKwargs.update(kwargs)
-
-        env = os.environ.copy()
-        env['PATH'] = self.settings['context_build_path'] + ':' + env['PATH']
-        env.update(defaultKwargs.get('env', {}))
-        defaultKwargs['env'] = env
-
-        p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
-        if echoStdout:
-            if callable(echoStdout):
-                lineCallback = echoStdout
-            else:
-                lineCallback = lambda l: self.writeOutput(l, end = '')
-
-            stdThread = threading.Thread(target = self._dumpStdout,
-                    args = (p, lineCallback))
-            stdThread.start()
-        while p.poll() is None:
-            if self._shouldStop():
-                break
-            time.sleep(0.1)
-        if p.poll() is None:
-            # Exited due to shouldStop
-            self.writeOutput("\n\nAborting tests...")
-            while p.poll() is None:
-                try:
-                    p.terminate()
-                except OSError:
-                    # Died already
-                    pass
-                time.sleep(0.1)
-
-        if echoStdout:
-            # Finish getting output
-            stdThread.join()
-
-        if not echoStdout:
-            tf = defaultKwargs['stdout']
-            tf.seek(0)
-            return tf
+        raise NotImplementedError()
 
 
     def runTests(self, writeOutput, shouldStop):
@@ -146,3 +94,62 @@ class RunnerBase(object):
                 lineCallback(l)
             time.sleep(0.1)
         lineCallback(p.stdout.read())
+
+
+    def _runProcess(self, cmd, echoStdout = True, **kwargs):
+        """Run a command through subprocess.Popen and optionally spit all
+        of the output to our output pane.  Checks shouldStop throughout
+        the execution.
+
+        echoStdout -- If false, returns the standard output as a file-like
+                object.
+        """
+        cmd = str(self.cmd)
+        defaultKwargs = {
+            'universal_newlines': True
+        }
+        if echoStdout:
+            defaultKwargs['stdout'] = subprocess.PIPE
+        else:
+            defaultKwargs['stdout'] = tempfile.TemporaryFile()
+        defaultKwargs['stderr'] = subprocess.STDOUT
+        defaultKwargs.update(kwargs)
+
+        env = os.environ.copy()
+        env['PATH'] = self.settings['context_build_path'] + ':' + env['PATH']
+        env.update(defaultKwargs.get('env', {}))
+        defaultKwargs['env'] = env
+
+        p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
+        if echoStdout:
+            if callable(echoStdout):
+                lineCallback = echoStdout
+            else:
+                lineCallback = lambda l: self.writeOutput(l, end = '')
+
+            stdThread = threading.Thread(target = self._dumpStdout,
+                    args = (p, lineCallback))
+            stdThread.start()
+        while p.poll() is None:
+            if self._shouldStop():
+                break
+            time.sleep(0.1)
+        if p.poll() is None:
+            # Exited due to shouldStop
+            self.writeOutput("\n\nAborting tests...")
+            while p.poll() is None:
+                try:
+                    p.terminate()
+                except OSError:
+                    # Died already
+                    pass
+                time.sleep(0.1)
+
+        if echoStdout:
+            # Finish getting output
+            stdThread.join()
+
+        if not echoStdout:
+            tf = defaultKwargs['stdout']
+            tf.seek(0)
+            return tf
