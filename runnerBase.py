@@ -17,10 +17,15 @@ class RunnerBase(object):
     the specs for re-running failed tests.
     """
 
+    _TEST_REGEX = None
+    _TEST_REGEX_doc = """Specify as a regex (re.compile) for the default
+            implementation of getTestsFromRegion, which requires
+            _findTestFromLine to be implemented in the subclass."""
+
     def __init__(self, options, build):
         self.options = options
         self.build = build
-        self.failures = []
+        self.failures = {}
 
 
     @property
@@ -28,11 +33,36 @@ class RunnerBase(object):
         return self._settings
 
 
-    def getTestsFromRegion(self, filePath, viewText, start, end):
+    def getTestsFromRegion(self, viewText, start, end):
         """Implement in subclass to get a list of tests (input into setupTests)
         to run based on the region from start to end in viewText.
         """
-        raise NotImplementedError()
+        if self._TEST_REGEX is None:
+            raise NotImplementedError("_TEST_REGEX not defined")
+
+        tests = []
+        testLineRe = self._TEST_REGEX
+
+        # Add the test before the given start.. end region, and any tests
+        # between start and end.
+        for line in reversed(list(testLineRe.finditer(viewText))):
+            # After end?  Ignore
+            if line.start() > end:
+                continue
+            # Between points?
+            if line.end() >= start:
+                test = self._findTestFromLine(viewText, line, line.start())
+                if test:
+                    tests.append(test)
+            else:
+                # Before start, if we got a hit, this is the last test we may
+                # add before aborting
+                test = self._findTestFromLine(viewText, line, line.start())
+                if test:
+                    tests.append(test)
+                break
+
+        return tests
 
 
     def runTests(self, writeOutput, shouldStop):
@@ -42,7 +72,7 @@ class RunnerBase(object):
 
         writeOutput can be used to write output directly to the build pane.
         """
-        self.failures = []
+        self.failures = {}
         if ('Runner' + self.settings['context_build_runner'].title()
                 != self.__class__.__name__):
             return
@@ -51,14 +81,13 @@ class RunnerBase(object):
         self.doRunner(writeOutput, shouldStop)
 
 
-    def setupTests(self, paths = [], tests = []):
+    def setupTests(self, paths = [], tests = {}):
         """Set up the runner for new tests; load config.  Run in the main
         thread.
 
         paths - list of files and folders to consider for execution.
 
-        tests - list of file:testspec to execute (line is optional, but
-                there should be two colons)
+        tests - dict of filePath:[ testspec ] to execute
         """
         # Used for settings only
         self.view = self.build.window.active_view()
@@ -94,6 +123,23 @@ class RunnerBase(object):
                 lineCallback(l)
             time.sleep(0.1)
         lineCallback(p.stdout.read())
+
+
+    def _escapePaths(self, paths):
+        """Return a space-preceded string of the given paths delimited by
+        spaces, each escaped with quotes as necessary.
+        """
+        cmd = ""
+        for p in paths:
+            if ' ' in p:
+                cmd += ' "{0}"'.format(p)
+            else:
+                cmd += ' ' + p
+        return cmd
+
+
+    def _findTestFromLine(self, viewText, testMatch, testStartPos):
+        raise NotImplementedError()
 
 
     def _runProcess(self, cmd, echoStdout = True, **kwargs):

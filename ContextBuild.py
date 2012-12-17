@@ -209,12 +209,14 @@ class ContextBuildSelectionCommand(ContextBuildPlugin):
         view = self.window.active_view()
         viewText = view.substr(sublime.Region(0, view.size()))
         regions = view.sel()
-        tests = []
+        tests = {}
         filePath = view.file_name()
         runner = self.build.getRunnerForPath(filePath)
         for reg in regions:
-            tests.extend(runner.getTestsFromRegion(filePath, viewText, reg.a,
-                    reg.b))
+            newTests = runner.getTestsFromRegion(viewText, reg.a, reg.b)
+            if not newTests:
+                continue
+            tests.setdefault(filePath, []).extend(newTests)
 
         self.build.setupTests(tests = tests)
         self.build.run()
