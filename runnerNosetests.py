@@ -45,8 +45,12 @@ class RunnerNosetests(RunnerBase):
             cmd += self._escapePaths(paths)
         elif tests:
             for filePath, testSpecs in tests.iteritems():
-                cmd += self._escapePaths([ filePath + ':' + t
-                        for t in testSpecs ])
+                if None in testSpecs:
+                    # Whole file
+                    cmd += self._escapePaths([ filePath ])
+                else:
+                    cmd += self._escapePaths([ filePath + ':' + t
+                            for t in testSpecs ])
         else:
             self.cmd = 'echo "No tests to run."'
             return
