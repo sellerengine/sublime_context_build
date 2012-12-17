@@ -1,6 +1,6 @@
 [
-    { "keys": [ "option+shift+b" ], "command": "context_build_current" },
-    { "keys": [ "option+b" ], "command": "context_build_selection" },
+    { "keys": [ "option+b" ], "command": "context_build_current" },
+    { "keys": [ "option+shift+b" ], "command": "context_build_selection" },
     { "keys": [ "super+b" ], "command": "context_build_last" },
     { "keys": [ "super+shift+b" ], "command": "context_build_failures" }
 ]

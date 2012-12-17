@@ -10,8 +10,8 @@ your user settings.
 
 Shortcuts (Ctrl / Super and Option / Alt are interchangeable):
 
-* Alt+B - Build selected test(s) (or the one before the cursor)
-* Alt+Shift+B - Build current file
+* Alt+B - Build current file
+* Alt+Shift+B - Build selected test(s) (or the one before the cursor)
 * Ctrl+B - Re-run last build
 * Ctrl+Shift+B - Re-run failures from last build
 
