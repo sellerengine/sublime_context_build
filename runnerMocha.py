@@ -10,10 +10,12 @@ class RunnerMocha(RunnerBase):
     _JS_CALL_STRING = r"""[\( ]("[^"]*"|'[^']*'),"""
     _TEST_REGEX = re.compile("^([ \t]*)it" + _JS_CALL_STRING, re.M)
     _DESCRIBE_REGEX = re.compile("^([ \t]*)describe" + _JS_CALL_STRING, re.M)
+    _HEADER_LINE = re.compile(r"^\d+\.\.\d+$", re.M)
 
 
     def doRunner(self, writeOutput, shouldStop):
         writeOutput("Running tests: " + self.cmd)
+        self._nextTestLines = None  # Set to None before the header line
         self._lastTest = -1
         self._tests = {}
         self._countOk = 0
@@ -86,12 +88,23 @@ class RunnerMocha(RunnerBase):
 
 
     def _processLine(self, line):
-        if line.startswith('ok '):
+        if self._nextTestLines is None:
+            # Looking for header line or initialization errors
+            if self._HEADER_LINE.match(line.strip()):
+                # No longer looking for header
+                self._nextTestLines = []
+            else:
+                # If it's not the header line, print it, since it's possibly
+                # error or debug information
+                self.writeOutput(line.rstrip())
+        elif line.startswith('ok '):
             _, testId, text = line.split(' ', 2)
             if testId == self._lastTest:
                 return
             self._lastTest = testId
-            self._tests[testId] = { 'test': text.strip(), 'ok': True }
+            self._tests[testId] = { 'test': text.strip(), 'ok': True,
+                    'lines': self._nextTestLines }
+            self._nextTestLines = []
             self._countOk += 1
             self.writeOutput('.', end = '')
         elif line.startswith('not ok '):
@@ -100,13 +113,12 @@ class RunnerMocha(RunnerBase):
                 return
             self._lastTest = testId
             self._tests[testId] = { 'test': text.strip(), 'ok': False,
-                    'errorLines': [] }
+                    'errorLines': self._nextTestLines }
+            self._nextTestLines = []
             self._countFailed += 1
             # Mocha doesn't tell us which file a test came from... so....
             for f in self._paths:
                 self.failures.setdefault(f, []).append(text.strip())
             self.writeOutput('E', end = '')
-        elif self._lastTest != -1 and (
-                'errorLines' in self._tests[self._lastTest]):
-            self._tests[self._lastTest]['errorLines'].append(line.rstrip())
-            self.writeOutput(line.rstrip())
+        else:
+            self._nextTestLines.append(line.rstrip())
