@@ -11,6 +11,7 @@ class RunnerMocha(RunnerBase):
     _TEST_REGEX = re.compile("^([ \t]*)it" + _JS_CALL_STRING, re.M)
     _DESCRIBE_REGEX = re.compile("^([ \t]*)describe" + _JS_CALL_STRING, re.M)
     _HEADER_LINE = re.compile(r"^\d+\.\.\d+$", re.M)
+    _ERROR_LINE = re.compile(r"^( +.*Error:.*| +at .*:\d+:\d+\)?)$")
 
 
     def doRunner(self, writeOutput, shouldStop):
@@ -120,5 +121,7 @@ class RunnerMocha(RunnerBase):
             for f in self._paths:
                 self.failures.setdefault(f, []).append(text.strip())
             self.writeOutput('E', end = '')
+        elif self._ERROR_LINE.match(line.rstrip()):
+            self._tests[self._lastTest]['errorLines'].append(line.rstrip())
         else:
             self._nextTestLines.append(line.rstrip())
