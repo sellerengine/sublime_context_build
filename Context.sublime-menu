@@ -1,0 +1,4 @@
+[
+    { "caption": "-", "id": "context-build-separator" },
+    { "caption": "Build file", "command": "context_build_current" }
+]
