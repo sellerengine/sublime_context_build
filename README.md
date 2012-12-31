@@ -17,3 +17,27 @@ Shortcuts (Ctrl / Super and Option / Alt are interchangeable):
 
 You may also right click files in the tree-view and choose "Build Selected" to
 trigger a build.
+
+## Language support
+
+### Python
+
+The default ContextBuild action is to run nosetests with -v.
+
+### NodeJS / Mocha
+
+If you want to use the mocha test runner (NodeJS), you'll need to modify your
+.sublime-project file to include "context_build_runner" in its "settings"
+section:
+
+    "settings": {
+        "context_build_runner": "mocha"
+    }
+
+If you want to pass additional options to mocha, use the ContextBuild user
+configuration (may be found under Preferences -> Package Settings ->
+ContextBuild -> Settings - User).  For instance:
+
+    {
+        "mocha_compilers": [ "sjs:/home/walt/dev/seriousjs/src/seriousjs" ]
+    }
