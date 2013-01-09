@@ -113,16 +113,17 @@ class RunnerBase(object):
         return self.view.settings().get(name, self.options.get(name, default))
 
 
-    def _dumpStdout(self, p, lineCallback):
+    def _dumpStdout(self, p, outputCallback):
         """Dumps the stdout from subprocess p; called in a new thread."""
         while p.poll() is None:
-            while True:
-                l = p.stdout.readline()
-                if not l:
-                    break
-                lineCallback(l)
+            try:
+                # May raise IOError if in non-blocking mode
+                l = p.stdout.read()
+                outputCallback(l)
+            except IOError:
+                pass
             time.sleep(0.1)
-        lineCallback(p.stdout.read())
+        outputCallback(p.stdout.read())
 
 
     def _escapePaths(self, paths):
@@ -148,14 +149,19 @@ class RunnerBase(object):
         the execution.
 
         echoStdout -- If false, returns the standard output as a file-like
-                object.
+                object.  If a callable, then the method passed will be
+                called with each buffered output read (not necessarily a line).
         """
-        cmd = str(self.cmd)
+        # Can't use unicode!
+        cmd = str(cmd)
         defaultKwargs = {
             'universal_newlines': True
         }
         if echoStdout:
             defaultKwargs['stdout'] = subprocess.PIPE
+            # Don't buffer the output, but echo it as it comes in regardless
+            # of newlines, etc
+            defaultKwargs['bufsize'] = 1
         else:
             defaultKwargs['stdout'] = tempfile.TemporaryFile()
         defaultKwargs['stderr'] = subprocess.STDOUT
@@ -168,13 +174,19 @@ class RunnerBase(object):
 
         p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
         if echoStdout:
+            try:
+                import fcntl
+                fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+            except ImportError:
+                # Windows?
+                pass
             if callable(echoStdout):
-                lineCallback = echoStdout
+                outputCallback = echoStdout
             else:
-                lineCallback = lambda l: self.writeOutput(l, end = '')
+                outputCallback = lambda l: self.writeOutput(l, end = '')
 
             stdThread = threading.Thread(target = self._dumpStdout,
-                    args = (p, lineCallback))
+                    args = (p, outputCallback))
             stdThread.start()
         while p.poll() is None:
             if self._shouldStop():

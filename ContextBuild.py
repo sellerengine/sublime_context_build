@@ -3,6 +3,7 @@ import sublime
 import sublime_plugin
 
 import datetime
+import re
 import threading
 import time
 
@@ -10,7 +11,6 @@ from runnerMocha import RunnerMocha
 from runnerNosetests import RunnerNosetests
 
 runners = [ RunnerNosetests, RunnerMocha ]
-
 options = sublime.load_settings('ContextBuild.sublime-settings')
 
 class Build(object):
@@ -69,6 +69,17 @@ class Build(object):
 
         newView = True
         if options.get('hide_last_build_on_new'):
+            if self.lastView is None:
+                # Plugin may have been reloaded, see if our window has any 
+                # other context builds that we should replace.
+                for view in self.window.views():
+                    if (re.match("^Build.*\.context-build$", view.name())
+                            is not None):
+                        # This is an old build view from a previous invocation, 
+                        # use it instead of creating a new one.
+                        self.lastView = view
+                        break
+
             if (self.lastView
                     and self.window.get_view_index(self.lastView)[0] != -1):
                 self.view = self.lastView
@@ -83,8 +94,8 @@ class Build(object):
             # Be sure to make the view for our output in the main thread, so
             # that we don't have issues with memory access in sublime.
             self.view = self.window.new_file()
-            self.viewId = self.view.id()
         self.lastView = self.view
+        self.viewId = self.view.id()
 
         now = datetime.datetime.now()
         timeStr = now.strftime("%I:%M:%S%p-%d-%m-%Y")

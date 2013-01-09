@@ -12,8 +12,14 @@ class RunnerNosetests(RunnerBase):
 
 
     def doRunner(self, writeOutput, shouldStop):
-        writeOutput("Running tests: " + self.cmd)
-        self._runProcess(self.cmd, echoStdout = True,
+        realCmd = self.cmd
+        nosetestsArgs = self.options.get('nosetests_args', '')
+        if nosetestsArgs:
+            # Must have preceding space
+            nosetestsArgs = ' ' + nosetestsArgs
+        realCmd = realCmd.replace("{nosetests_args}", nosetestsArgs)
+        writeOutput("Running tests: " + realCmd)
+        self._runProcess(realCmd, echoStdout = True,
                 env = { 'PYTHONPATH':
                         self.settings['context_build_python_path']})
 
@@ -37,9 +43,7 @@ class RunnerNosetests(RunnerBase):
         self._noseIdsFile = os.path.join(tempfile.gettempdir(),
                 "context-build-nose-ids")
         cmd += self._noseIdsFile
-        args = self.options.get('nosetests_args', '')
-        if args:
-            cmd += " " + args
+        cmd += "{nosetests_args}"
 
         if paths:
             cmd += self._escapePaths(paths)

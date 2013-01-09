@@ -41,3 +41,15 @@ ContextBuild -> Settings - User).  For instance:
     {
         "mocha_compilers": [ "sjs:/home/walt/dev/seriousjs/src/seriousjs" ]
     }
+
+## Changelog
+
+### 0.8.1
+
+* When you close and re-open sublime text, any existing build views will be
+  replaced with new builds, rather than creating a new view.
+
+* Output from child process (e.g. nosetests) displays as it happens rather
+  than based on lines.
+
+* Repeated builds are sensitive to config changes

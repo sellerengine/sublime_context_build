@@ -15,14 +15,27 @@ class RunnerMocha(RunnerBase):
 
 
     def doRunner(self, writeOutput, shouldStop):
-        writeOutput("Running tests: " + self.cmd)
+        realCmd = self.cmd
+        mochaOptions = ""
+
+        # mocha_compilers is a system-wide setting, not a project setting,
+        # se we get it from options rather than settings.
+        compilers = self.options.get('mocha_compilers')
+        if compilers:
+            mochaOptions += ' --compilers '
+            mochaOptions += ','.join(compilers)
+
+        realCmd = realCmd.replace("{mocha_options}", mochaOptions)
+
+        writeOutput("Running tests: " + realCmd)
         self._nextTestLines = None  # Set to None before the header line
         self._lastTest = -1
         self._tests = {}
         self._countOk = 0
         self._countFailed = 0
+        self._allOutput = ""
         # Use first failure as paths storage
-        self._runProcess(self.cmd, echoStdout = self._processLine)
+        self._runProcess(realCmd, echoStdout = self._processOutput)
 
         self.writeOutput('')
         self.writeOutput("=" * 80)
@@ -39,13 +52,7 @@ class RunnerMocha(RunnerBase):
 
 
     def runnerSetup(self, paths = [], tests = {}):
-        cmd = "mocha --reporter tap"
-        # mocha_compilers is a system-wide setting, not a project setting,
-        # se we get it from options rather than settings.
-        compilers = self.options.get('mocha_compilers')
-        if compilers:
-            cmd += ' --compilers '
-            cmd += ','.join(compilers)
+        cmd = "mocha --reporter tap{mocha_options} "
 
         if paths:
             cmd += self._escapePaths(paths)
@@ -125,3 +132,13 @@ class RunnerMocha(RunnerBase):
             self._tests[self._lastTest]['errorLines'].append(line.rstrip())
         else:
             self._nextTestLines.append(line.rstrip())
+
+
+    def _processOutput(self, output):
+        self._allOutput += output
+        while True:
+            parts = self._allOutput.split('\n', 1)
+            if len(parts) == 1:
+                break
+            self._processLine(parts[0] + '\n')
+            self._allOutput = parts[1]

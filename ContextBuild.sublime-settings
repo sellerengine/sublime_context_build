@@ -1,21 +1,25 @@
 {
-    //Project-specific build configuration
+    //=========================================================================
+    //Project-specific build configuration (may be overridden by settings in
+    //.sublime-project files
+    //=========================================================================
     //The PATH to used for launching subprocesses
     "context_build_path": "/usr/local/bin:/usr/bin:/usr/sbin",
     //The PYTHONPATH to use for launching python_runner
     "context_build_python_path": "",
-    //Default runner for this project.
+    //Default runner for this project
     "context_build_runner": "nosetests",
-    //Specific runners (run before the default) for
 
-    //Plugin configuration
+    //=========================================================================
+    //Plugin configuration (global)
+    //=========================================================================
     //Hide last build when a new build is issued in the same window?
     "hide_last_build_on_new": true,
     "save_before_build": true,
 
     //Settings for Built-in runners
     //nosetests
-    "nosetests_args": "-v",
+    "nosetests_args": "",
     //mocha
     "mocha_compilers": []
 }
