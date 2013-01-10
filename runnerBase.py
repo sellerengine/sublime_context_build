@@ -33,6 +33,13 @@ class RunnerBase(object):
         return self._settings
 
 
+    def cacheOptionsForBuild(self):
+        """Called in main thread; override to load options to use in doRunner,
+        since that function is not called in the main thread (on OS X, this
+        creates an exception when trying to access options).
+        """
+
+
     def getTestsFromRegion(self, viewText, start, end):
         """Implement in subclass to get a list of tests (input into setupTests)
         to run based on the region from start to end in viewText.

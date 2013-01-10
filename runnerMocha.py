@@ -13,6 +13,9 @@ class RunnerMocha(RunnerBase):
     _HEADER_LINE = re.compile(r"^\d+\.\.\d+$", re.M)
     _ERROR_LINE = re.compile(r"^( +.*Error:.*| +at .*:\d+:\d+\)?)$")
 
+    def cacheOptionsForBuild(self):
+        self._mochaCompilers = self.options.get('mocha_compilers', '')
+
 
     def doRunner(self, writeOutput, shouldStop):
         realCmd = self.cmd
@@ -20,7 +23,7 @@ class RunnerMocha(RunnerBase):
 
         # mocha_compilers is a system-wide setting, not a project setting,
         # se we get it from options rather than settings.
-        compilers = self.options.get('mocha_compilers')
+        compilers = self._mochaCompilers
         if compilers:
             mochaOptions += ' --compilers '
             mochaOptions += ','.join(compilers)

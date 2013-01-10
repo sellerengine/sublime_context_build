@@ -10,10 +10,13 @@ class RunnerNosetests(RunnerBase):
 
     _TEST_REGEX = re.compile("^([ \t]*)def (test[^( ]*)", re.M)
 
+    def cacheOptionsForBuild(self):
+        self._nosetestsArgs = self.options.get('nosetests_args', '')
+
 
     def doRunner(self, writeOutput, shouldStop):
         realCmd = self.cmd
-        nosetestsArgs = self.options.get('nosetests_args', '')
+        nosetestsArgs = self._nosetestsArgs
         if nosetestsArgs:
             # Must have preceding space
             nosetestsArgs = ' ' + nosetestsArgs

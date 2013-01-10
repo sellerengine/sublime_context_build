@@ -70,17 +70,17 @@ class Build(object):
         newView = True
         if options.get('hide_last_build_on_new'):
             if self.lastView is None:
-                # Plugin may have been reloaded, see if our window has any 
+                # Plugin may have been reloaded, see if our window has any
                 # other context builds that we should replace.
                 for view in self.window.views():
-                    if (re.match("^Build.*\.context-build$", view.name())
+                    if (re.match(r"^Build.*\.context-build$", view.name())
                             is not None):
-                        # This is an old build view from a previous invocation, 
+                        # This is an old build view from a previous invocation,
                         # use it instead of creating a new one.
                         self.lastView = view
                         break
 
-            if (self.lastView
+            if (self.lastView is not None
                     and self.window.get_view_index(self.lastView)[0] != -1):
                 self.view = self.lastView
                 edit = self.view.begin_edit()
@@ -105,6 +105,11 @@ class Build(object):
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self
+
+        # Settings must be loaded in the main thread.  Therefore, tell each
+        # runner to cache its options for the impending build.
+        for r in self.runners:
+            r.cacheOptionsForBuild()
 
         self.shouldStop = False
         self.thread = threading.Thread(target = self._realRun)
