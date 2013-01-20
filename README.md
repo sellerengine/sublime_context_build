@@ -1,5 +1,17 @@
 # ContextBuild for Sublime Text 2
 
+ContextBuild is a plugin for Sublime Text 2 that replaces build functionality
+for working with dynamic languages.  It has the ability to run any number of
+files under a test runner configured on a per-project basis, and also the
+ability to run any single test or multiple tests within an individual file.
+
+ContextBuild also supports re-running the last build selection, as well as only failed tests from the last selection.
+
+The result is a build system that cuts time off from fixing broken tests and
+also from creating new tests.
+
+ContextBuild currently supports Python (nosetests) and NodeJS (mocha).
+
 ## Usage
 
 Clone into (or ln -s to) your ~/.config/sublime-text-2/Packages folder.  Enjoy!
