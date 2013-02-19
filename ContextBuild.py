@@ -64,7 +64,7 @@ class Build(object):
 
         if options.get('save_before_build'):
             for view in self.window.views():
-                if view.is_dirty():
+                if view.is_dirty() and view.file_name() is not None:
                     view.run_command("save")
 
         newView = True
