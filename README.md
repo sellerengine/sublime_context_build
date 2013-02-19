@@ -56,6 +56,11 @@ ContextBuild -> Settings - User).  For instance:
 
 ## Changelog
 
+### 0.8.2
+
+* Save on build won't try to save files that do not exist on your hard drive
+  (and would result in a prompt)
+
 ### 0.8.1
 
 * When you close and re-open sublime text, any existing build views will be
