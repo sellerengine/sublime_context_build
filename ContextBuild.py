@@ -20,6 +20,7 @@ class Build(object):
     viewIdToBuild = {}
 
     def __init__(self, window):
+        self.view = None
         self.window = window
         self.lastView = None
         self.thread = None
@@ -70,38 +71,41 @@ class Build(object):
         newView = True
         if options.get('hide_last_build_on_new'):
             if self.lastView is None:
-                # Plugin may have been reloaded, see if our window has any
+                # Plugin may have been reloaded, see if our window has any 
                 # other context builds that we should replace.
+                viewNamePattern = "^Build.*\.context-build$"
                 for view in self.window.views():
-                    if (re.match(r"^Build.*\.context-build$", view.name())
-                            is not None):
-                        # This is an old build view from a previous invocation,
+                    if (re.match(viewNamePattern, view.name()) is not None 
+                            and self.window.get_view_index(view)[0] != -1):
+                        # This is an old build view from a previous invocation, 
                         # use it instead of creating a new one.
                         self.lastView = view
                         break
 
-            if (self.lastView is not None
-                    and self.window.get_view_index(self.lastView)[0] != -1):
-                self.view = self.lastView
-                edit = self.view.begin_edit()
-                self.view.replace(edit, sublime.Region(0, self.view.size()),
-                        '')
-                self.view.end_edit(edit)
+            if self.lastView is not None:
+                self.outputPane = self.lastView
+                edit = self.outputPane.begin_edit()
+                self.outputPane.erase(edit, 
+                        sublime.Region(0, self.outputPane.size()))
+                self.outputPane.end_edit(edit)
+                self.window.focus_view(self.outputPane)
                 self.window.focus_view(self.view)
                 newView = False
 
         if newView:
             # Be sure to make the view for our output in the main thread, so
             # that we don't have issues with memory access in sublime.
-            self.view = self.window.new_file()
-        self.lastView = self.view
-        self.viewId = self.view.id()
+            self.outputPane = self.window.new_file()
+        self.lastView = self.outputPane
+        self.viewId = self.outputPane.id()
 
         now = datetime.datetime.now()
         timeStr = now.strftime("%I:%M:%S%p-%d-%m-%Y")
         buildName = "Build-{0}.context-build".format(timeStr)
-        self.view.set_scratch(True)
-        self.view.set_name(buildName)
+        self.outputPane.set_scratch(True)
+        self.outputPane.set_name(buildName)
+        self.window.focus_view(self.outputPane)
+        self.window.focus_view(self.view)
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self
@@ -115,7 +119,7 @@ class Build(object):
         self.thread = threading.Thread(target = self._realRun)
         self.thread.daemon = True
         self.thread.start()
-
+        
 
     def setupTests(self, paths = [], tests = []):
         for r in self.runners:
@@ -133,8 +137,8 @@ class Build(object):
 
 
     def _realRun(self):
-        """Called in a new thread.  self.view must already have been set to
-        a new file in the main thread.
+        """Called in a new thread.  self.outputPane must already have been set 
+        to a new file in the main thread.
         """
         try:
             self._doBuild()
@@ -148,7 +152,7 @@ class Build(object):
         """
         with self.lock:
             self.viewIdToBuild.pop(self.viewId)
-        self.view = None
+        self.outputPane = None
         self.thread = None
         self.hasBuilt = True
 
@@ -168,6 +172,8 @@ class Build(object):
         """The main method for the build thread"""
         for r in self.runners:
             r.runTests(self._writeOutput, self._shouldStop)
+        self.outputPane.show(self.outputPane.size())
+
 
 
     def _shouldStop(self):
@@ -178,10 +184,17 @@ class Build(object):
         cat = text + end
         # Print in sublime's main thread to not cause buffer issues
         def realPrint():
-            edit = self.view.begin_edit()
-            self.view.insert(edit, self.view.size(), cat)
-            self.view.end_edit(edit)
-            self.view.show_at_center(self.view.size())
+            visibleRegion = self.outputPane.visible_region()
+            shouldKeepInView = (visibleRegion.begin() <= self.outputPane.size() 
+                    <= visibleRegion.end())
+
+            edit = self.outputPane.begin_edit()
+            self.outputPane.insert(edit, self.outputPane.size(), cat)
+            self.outputPane.end_edit(edit)
+            
+            if shouldKeepInView:
+                self.outputPane.show(self.outputPane.size())
+
         sublime.set_timeout(realPrint, 0)
 
 
@@ -201,6 +214,7 @@ class ContextBuildPlugin(sublime_plugin.WindowCommand):
 
 class ContextBuildCurrentCommand(ContextBuildPlugin):
     def run(self):
+        self.build.view = self.window.active_view()
         self.build.setupTests(paths = [
                 self.window.active_view().file_name() ])
         self.build.run()
