@@ -20,7 +20,6 @@ class Build(object):
     viewIdToBuild = {}
 
     def __init__(self, window):
-        self.view = None
         self.window = window
         self.lastView = None
         self.thread = None
@@ -63,6 +62,8 @@ class Build(object):
             scheduler.start()
             return
 
+        currentUserView = self.window.active_view()
+
         if options.get('save_before_build'):
             for view in self.window.views():
                 if view.is_dirty() and view.file_name() is not None:
@@ -88,8 +89,6 @@ class Build(object):
                 self.outputPane.erase(edit, 
                         sublime.Region(0, self.outputPane.size()))
                 self.outputPane.end_edit(edit)
-                self.window.focus_view(self.outputPane)
-                self.window.focus_view(self.view)
                 newView = False
 
         if newView:
@@ -105,7 +104,7 @@ class Build(object):
         self.outputPane.set_scratch(True)
         self.outputPane.set_name(buildName)
         self.window.focus_view(self.outputPane)
-        self.window.focus_view(self.view)
+        self.window.focus_view(currentUserView)
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self
@@ -214,7 +213,6 @@ class ContextBuildPlugin(sublime_plugin.WindowCommand):
 
 class ContextBuildCurrentCommand(ContextBuildPlugin):
     def run(self):
-        self.build.view = self.window.active_view()
         self.build.setupTests(paths = [
                 self.window.active_view().file_name() ])
         self.build.run()
