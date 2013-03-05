@@ -104,7 +104,8 @@ class Build(object):
         self.outputPane.set_scratch(True)
         self.outputPane.set_name(buildName)
         self.window.focus_view(self.outputPane)
-        self.window.focus_view(currentUserView)
+        if currentUserView is not None:
+            self.window.focus_view(currentUserView)
 
         with self.lock:
             self.viewIdToBuild[self.viewId] = self
@@ -121,8 +122,16 @@ class Build(object):
         
 
     def setupTests(self, paths = [], tests = []):
+        madeView = None
+        if self.window.active_view() is None:
+            madeView = self.window.new_file()
+            madeView.set_scratch(True)
+
         for r in self.runners:
             r.setupTests(paths = paths, tests = tests)
+
+        if madeView is not None:
+            self.window.run_command("close")
 
 
     def useFailures(self):
