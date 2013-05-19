@@ -114,7 +114,7 @@ class RunnerMocha(RunnerBase):
                 return
             self._lastTest = testId
             self._tests[testId] = { 'test': text.strip(), 'ok': True,
-                    'lines': self._nextTestLines }
+                    'lines': self._nextTestLines, 'errorLines': [] }
             self._nextTestLines = []
             self._countOk += 1
             self.writeOutput('.', end = '')
