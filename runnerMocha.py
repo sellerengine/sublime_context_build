@@ -11,7 +11,8 @@ class RunnerMocha(RunnerBase):
     _TEST_REGEX = re.compile("^([ \t]*)it" + _JS_CALL_STRING, re.M)
     _DESCRIBE_REGEX = re.compile("^([ \t]*)describe" + _JS_CALL_STRING, re.M)
     _HEADER_LINE = re.compile(r"^\d+\.\.\d+$", re.M)
-    _ERROR_LINE = re.compile(r"^(  [a-zA-Z0-9]*Error:.*| +at .*:\d+:\d+\)?)$")
+    _ERROR_LINE = re.compile(r"^  [a-zA-Z0-9]*Error:.*$")
+    _ERROR_CONTINUE_LINE = re.compile(r"^ +at .*:\d+:\d+\)?$")
 
     def cacheOptionsForBuild(self):
         self._mochaCompilers = self.options.get('mocha_compilers', '')
@@ -36,6 +37,7 @@ class RunnerMocha(RunnerBase):
         self._tests = {}
         self._countOk = 0
         self._countFailed = 0
+        self._inError = False
         self._allOutput = ""
         # Use first failure as paths storage
         self._runProcess(realCmd, echoStdout = self._processOutput)
@@ -72,9 +74,9 @@ class RunnerMocha(RunnerBase):
                     testNames.add(ts)
 
             cmd += self._escapePaths(paths)
-            cmd += ' --grep "'
-            cmd += '|'.join(testNames)
-            cmd += '"'
+            cmd += ' --grep "^'
+            cmd += '$|^'.join(testNames)
+            cmd += '$"'
             # and keep _paths the same as it was in tests
             self._paths = list(paths)
         else:
@@ -99,6 +101,13 @@ class RunnerMocha(RunnerBase):
 
 
     def _processLine(self, line):
+        if self._inError:
+            if self._ERROR_CONTINUE_LINE.match(line.rstrip()):
+                self._tests[self._lastTest]['errorLines'].append(line.rstrip())
+                return
+            # No longer reading error lines, leave this mode
+            self._inError = False
+
         if self._nextTestLines is None:
             # Looking for header line or initialization errors
             if self._HEADER_LINE.match(line.strip()):
@@ -133,6 +142,8 @@ class RunnerMocha(RunnerBase):
             self.writeOutput('E', end = '')
         elif self._ERROR_LINE.match(line.rstrip()):
             self._tests[self._lastTest]['errorLines'].append(line.rstrip())
+            # Set a flag so we look for file listings ("    at ...")
+            self._inError = True
         else:
             self._nextTestLines.append(line.rstrip())
 
