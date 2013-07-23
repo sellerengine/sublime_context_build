@@ -10,7 +10,7 @@ import time
 # know what settings we're interested in collapsing from the project settings.
 # (We have to know because options can only be fetched on the main thread)
 buildSettings = [ "context_build_path", "context_build_python_path",
-        "context_build_runner" ]
+        "context_build_python_virtualenv", "context_build_runner" ]
 
 class RunnerBase(object):
     """A class to run a certain type of tests and populate self.failed with
@@ -123,13 +123,18 @@ class RunnerBase(object):
     def _dumpStdout(self, p, outputCallback):
         """Dumps the stdout from subprocess p; called in a new thread."""
         while p.poll() is None:
-            try:
-                # May raise IOError if in non-blocking mode
-                l = p.stdout.read()
-                outputCallback(l)
-            except IOError:
-                pass
-            time.sleep(0.1)
+            t = time.time()
+            buf = []
+            while True:
+                l = p.stdout.read(1)
+                if l:
+                    buf.append(l)
+                    if time.time() - t > 0.1:
+                        break
+                else:
+                    break
+            if buf:
+                outputCallback(''.join(buf))
         outputCallback(p.stdout.read())
 
 
@@ -168,7 +173,7 @@ class RunnerBase(object):
             defaultKwargs['stdout'] = subprocess.PIPE
             # Don't buffer the output, but echo it as it comes in regardless
             # of newlines, etc
-            defaultKwargs['bufsize'] = 1
+            defaultKwargs['bufsize'] = 0
         else:
             defaultKwargs['stdout'] = tempfile.TemporaryFile()
         defaultKwargs['stderr'] = subprocess.STDOUT
@@ -181,12 +186,6 @@ class RunnerBase(object):
 
         p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
         if echoStdout:
-            try:
-                import fcntl
-                fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
-            except ImportError:
-                # Windows?
-                pass
             if callable(echoStdout):
                 outputCallback = echoStdout
             else:

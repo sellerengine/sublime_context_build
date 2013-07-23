@@ -7,11 +7,10 @@ import re
 import threading
 import time
 
-from runnerMocha import RunnerMocha
-from runnerNosetests import RunnerNosetests
+from .runnerMocha import RunnerMocha
+from .runnerNosetests import RunnerNosetests
 
 runners = [ RunnerNosetests, RunnerMocha ]
-options = sublime.load_settings('ContextBuild.sublime-settings')
 
 class Build(object):
     last = None
@@ -24,9 +23,10 @@ class Build(object):
         self.lastView = None
         self.thread = None
         self.hasBuilt = False
+        self.options = sublime.load_settings('ContextBuild.sublime-settings')
         self.runners = []
         for runner in runners:
-            self.runners.append(runner(options, self))
+            self.runners.append(runner(self.options, self))
 
 
     def abort(self):
@@ -64,13 +64,13 @@ class Build(object):
 
         currentUserView = self.window.active_view()
 
-        if options.get('save_before_build'):
+        if self.options.get('save_before_build'):
             for view in self.window.views():
                 if view.is_dirty() and view.file_name() is not None:
                     view.run_command("save")
 
         newView = True
-        if options.get('hide_last_build_on_new'):
+        if self.options.get('hide_last_build_on_new'):
             if self.lastView is None:
                 # Plugin may have been reloaded, see if our window has any 
                 # other context builds that we should replace.
@@ -85,10 +85,7 @@ class Build(object):
 
             if self.lastView is not None:
                 self.outputPane = self.lastView
-                edit = self.outputPane.begin_edit()
-                self.outputPane.erase(edit, 
-                        sublime.Region(0, self.outputPane.size()))
-                self.outputPane.end_edit(edit)
+                self.outputPane.run_command("context_build_clear_view")
                 newView = False
 
         if newView:
@@ -173,7 +170,7 @@ class Build(object):
         Must be called in main thread
         """
         return self.window.active_view().settings().get(name,
-                options.get(name, default))
+                self.options.get(name, default))
 
 
     def _doBuild(self):
@@ -189,21 +186,31 @@ class Build(object):
 
 
     def _writeOutput(self, text, end = '\n'):
+        if text is None:
+            return
+        elif isinstance(text, bytes):
+            text = text.decode('utf8')
         cat = text + end
-        # Print in sublime's main thread to not cause buffer issues
-        def realPrint():
-            visibleRegion = self.outputPane.visible_region()
-            shouldKeepInView = (visibleRegion.begin() <= self.outputPane.size() 
-                    <= visibleRegion.end())
 
-            edit = self.outputPane.begin_edit()
-            self.outputPane.insert(edit, self.outputPane.size(), cat)
-            self.outputPane.end_edit(edit)
-            
-            if shouldKeepInView:
-                self.outputPane.show(self.outputPane.size())
+        visibleRegion = self.outputPane.visible_region()
+        shouldKeepInView = (visibleRegion.begin() <= self.outputPane.size() 
+                <= visibleRegion.end())
 
-        sublime.set_timeout(realPrint, 0)
+        self.outputPane.run_command("context_build_append_text", 
+                dict(text = cat, scroll = shouldKeepInView))
+
+
+class ContextBuildAppendTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text, scroll = False):
+        self.view.insert(edit, self.view.size(), text)
+        
+        if scroll:
+            self.view.show(self.view.size())
+
+
+class ContextBuildClearViewCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
 class ContextBuildPlugin(sublime_plugin.WindowCommand):
@@ -283,7 +290,7 @@ class ContextBuildStopCommand(ContextBuildPlugin):
 
 
     def is_enabled(self):
-        return self.hasLastBuild() and self.build.thread
+        return True if self.hasLastBuild() and self.build.thread else False
 
 
 class ContextBuildViewClosedEvent(sublime_plugin.EventListener):

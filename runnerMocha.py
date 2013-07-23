@@ -1,7 +1,7 @@
 
 import re
 
-from runnerBase import RunnerBase
+from .runnerBase import RunnerBase
 
 class RunnerMocha(RunnerBase):
 
@@ -68,7 +68,7 @@ class RunnerMocha(RunnerBase):
             # keep a set of paths and add them to our cmd as we go
             paths = set()
             testNames = set()
-            for filePath, testSpecs in tests.iteritems():
+            for filePath, testSpecs in tests.items():
                 paths.add(filePath)
                 for ts in testSpecs:
                     testNames.add(ts)

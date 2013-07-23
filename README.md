@@ -36,6 +36,13 @@ trigger a build.
 
 The default ContextBuild action is to run nosetests with -v.
 
+Supported project options: 
+
+* context_build_python_path - The PYTHONPATH to use for the nosetests runner
+
+* context_build_python_virtualenv - The path to the virtualenv to use to run
+  the tests; bin/nosetests will be automatically appended.
+
 ### NodeJS / Mocha
 
 If you want to use the mocha test runner (NodeJS), you'll need to modify your
@@ -51,7 +58,7 @@ configuration (may be found under Preferences -> Package Settings ->
 ContextBuild -> Settings - User).  For instance:
 
     {
-        "mocha_compilers": [ "sjs:/home/walt/dev/seriousjs/src/seriousjs" ]
+        "mocha_compilers": [ "sjs:/home/walt/dev/seriousjs" ]
     }
 
 ## Changelog

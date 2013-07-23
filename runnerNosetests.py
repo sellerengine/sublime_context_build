@@ -4,7 +4,7 @@ import pickle
 import re
 import tempfile
 
-from runnerBase import RunnerBase
+from .runnerBase import RunnerBase
 
 class RunnerNosetests(RunnerBase):
 
@@ -16,6 +16,14 @@ class RunnerNosetests(RunnerBase):
 
     def doRunner(self, writeOutput, shouldStop):
         realCmd = self.cmd
+
+        venv = self.settings.get('context_build_python_virtualenv')
+        if venv:
+            venv = venv + '/bin/nosetests'
+        else:
+            venv = 'nosetests'
+        realCmd = realCmd.replace("{nosetests}", venv)
+
         nosetestsArgs = self._nosetestsArgs
         if nosetestsArgs:
             # Must have preceding space
@@ -28,13 +36,13 @@ class RunnerNosetests(RunnerBase):
 
         # Read nose output to see what failed
         try:
-            with open(self._noseIdsFile, 'r') as f:
+            with open(self._noseIdsFile, 'rb') as f:
                 fails = pickle.load(f)
             for failId in fails['failed']:
                 fpath, _module, testspec = fails['ids'][int(failId)]
                 self.failures.setdefault(fpath, []).append(testspec)
             os.remove(self._noseIdsFile)
-        except IOError:
+        except FileNotFoundError:
             pass
 
 
@@ -42,7 +50,7 @@ class RunnerNosetests(RunnerBase):
         """Build our command line based on the given paths and tests.
         """
         # We need --with-ids to generate the .noseids file
-        cmd = "nosetests --with-id --id-file="
+        cmd = "{nosetests} --with-id --id-file="
         self._noseIdsFile = os.path.join(tempfile.gettempdir(),
                 "context-build-nose-ids")
         cmd += self._noseIdsFile
@@ -51,7 +59,7 @@ class RunnerNosetests(RunnerBase):
         if paths:
             cmd += self._escapePaths(paths)
         elif tests:
-            for filePath, testSpecs in tests.iteritems():
+            for filePath, testSpecs in tests.items():
                 if None in testSpecs:
                     # Whole file
                     cmd += self._escapePaths([ filePath ])
@@ -66,7 +74,7 @@ class RunnerNosetests(RunnerBase):
 
 
     def _findTestFromLine(self, viewText, testMatch, testStartPos):
-        indent = testMatch.group(1)
+        indent = len(testMatch.group(1))
         testName = testMatch.group(2)
         findClass = re.compile("^([ \t]*)class (Test[^( ]*)", re.M)
         # Find the class
