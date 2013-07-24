@@ -9,8 +9,8 @@ import time
 # Sublime doesn't let you iterate over loaded settings, so we just have to
 # know what settings we're interested in collapsing from the project settings.
 # (We have to know because options can only be fetched on the main thread)
-buildSettings = [ "context_build_path", "context_build_python_path",
-        "context_build_python_virtualenv", "context_build_runner" ]
+buildSettings = [ "context_build_mocha_compilers", "context_build_path", 
+        "context_build_python_path", "context_build_python_virtualenv", "context_build_runner" ]
 
 class RunnerBase(object):
     """A class to run a certain type of tests and populate self.failed with

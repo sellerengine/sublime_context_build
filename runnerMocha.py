@@ -24,7 +24,8 @@ class RunnerMocha(RunnerBase):
 
         # mocha_compilers is a system-wide setting, not a project setting,
         # se we get it from options rather than settings.
-        compilers = self._mochaCompilers
+        compilers = self.settings.get('context_build_mocha_compilers',
+                self._mochaCompilers)
         if compilers:
             mochaOptions += ' --compilers '
             mochaOptions += ','.join(compilers)
