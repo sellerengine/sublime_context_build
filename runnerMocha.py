@@ -12,7 +12,7 @@ class RunnerMocha(RunnerBase):
     _DESCRIBE_REGEX = re.compile("^([ \t]*)describe" + _JS_CALL_STRING, re.M)
     _HEADER_LINE = re.compile(r"^\d+\.\.\d+$", re.M)
     _ERROR_LINE = re.compile(r"^  [a-zA-Z0-9]*Error:.*$")
-    _ERROR_CONTINUE_LINE = re.compile(r"^ +at .*:\d+:\d+\)?$")
+    _ERROR_CONTINUE_LINE = re.compile(r"^ +at .*:\d+(:\d+)?\)?$")
 
     def cacheOptionsForBuild(self):
         self._mochaCompilers = self.options.get('mocha_compilers', '')
