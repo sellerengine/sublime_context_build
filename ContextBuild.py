@@ -180,7 +180,9 @@ class Build(object):
         """The main method for the build thread"""
         for r in self.runners:
             r.runTests(self._writeOutput, self._shouldStop)
-        self.outputPane.show(self.outputPane.size())
+        def goToEnd():
+            self.outputPane.show(self.outputPane.size())
+        sublime.set_timeout(goToEnd, 0)
 
 
 
