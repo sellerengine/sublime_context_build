@@ -129,7 +129,7 @@ class RunnerBase(object):
                 l = p.stdout.read(1)
                 if l:
                     buf.append(l)
-                    if time.time() - t > 0.1:
+                    if time.time() - t > 0.5:
                         break
                 else:
                     break
@@ -155,7 +155,7 @@ class RunnerBase(object):
         raise NotImplementedError()
 
 
-    def _runProcess(self, cmd, echoStdout = True, **kwargs):
+    def _runProcess(self, cmd, echoStdout = True, echoLines = True, **kwargs):
         """Run a command through subprocess.Popen and optionally spit all
         of the output to our output pane.  Checks shouldStop throughout
         the execution.
@@ -163,6 +163,9 @@ class RunnerBase(object):
         echoStdout -- If false, returns the standard output as a file-like
                 object.  If a callable, then the method passed will be
                 called with each buffered output read (not necessarily a line).
+
+        echoLines -- [True] If True, echoStdout gets lines.  Otherwise, gets
+                individual chars.
         """
         # Can't use unicode!
         cmd = str(cmd)
@@ -185,15 +188,20 @@ class RunnerBase(object):
         defaultKwargs['env'] = env
 
         p = subprocess.Popen(shlex.split(cmd), **defaultKwargs)
+        stdThread = None
         if echoStdout:
             if callable(echoStdout):
                 outputCallback = echoStdout
             else:
                 outputCallback = lambda l: self.writeOutput(l, end = '')
 
-            stdThread = threading.Thread(target = self._dumpStdout,
-                    args = (p, outputCallback))
-            stdThread.start()
+            if not echoLines:
+                stdThread = threading.Thread(target = self._dumpStdout,
+                        args = (p, outputCallback))
+                stdThread.start()
+            else:
+                for line in p.stdout:
+                    outputCallback(line)
         while p.poll() is None:
             if self._shouldStop():
                 break
@@ -209,7 +217,7 @@ class RunnerBase(object):
                     pass
                 time.sleep(0.1)
 
-        if echoStdout:
+        if echoStdout and stdThread is not None:
             # Finish getting output
             stdThread.join()
 

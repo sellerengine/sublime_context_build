@@ -41,7 +41,8 @@ class RunnerMocha(RunnerBase):
         self._inError = False
         self._allOutput = ""
         # Use first failure as paths storage
-        self._runProcess(realCmd, echoStdout = self._processOutput)
+        self._runProcess(realCmd, echoStdout = self._processOutput,
+                echoLines = True)
 
         self.writeOutput('')
         self.writeOutput("=" * 80)
