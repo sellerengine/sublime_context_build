@@ -30,7 +30,7 @@ class RunnerNosetests(RunnerBase):
             nosetestsArgs = ' ' + nosetestsArgs
         realCmd = realCmd.replace("{nosetests_args}", nosetestsArgs)
         writeOutput("Running tests: " + realCmd)
-        self._runProcess(realCmd, echoStdout = True,
+        self._runProcess(realCmd, echoStdout = True, echoLines = False,
                 env = { 'PYTHONPATH':
                         self.settings['context_build_python_path']})
 
