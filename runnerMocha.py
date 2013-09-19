@@ -105,6 +105,13 @@ class RunnerMocha(RunnerBase):
     def _processLine(self, line):
         if self._inError:
             if self._ERROR_CONTINUE_LINE.match(line.rstrip()):
+                # Seen at least one continue line, so we can exit _inError state
+                self._inError = "seen"
+                self._tests[self._lastTest]['errorLines'].append(line.rstrip())
+                return
+            elif self._inError == True:
+                # Haven't seen any continue lines yet, and there will be at
+                # least one.
                 self._tests[self._lastTest]['errorLines'].append(line.rstrip())
                 return
             # No longer reading error lines, leave this mode
